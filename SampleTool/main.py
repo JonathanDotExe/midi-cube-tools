@@ -2,7 +2,9 @@ import dawdreamer
 import json
 import sys
 import traceback
-from scipy.io import wavfile
+import soundfile
+import numpy
+import pathlib
 
 class SampleToolParams:
 
@@ -44,6 +46,7 @@ def main():
     if not found:
         return
     
+    folder = str(pathlib.Path(config_path).parent.absolute())
     #Process
     for velocity in config.velocities:
         #Load plugin
@@ -52,10 +55,10 @@ def main():
         plugin = engine.make_plugin_processor("plugin", config.vst_path)
         if config.preset_path != '':
             print("Loading preset: ", config.preset_path)
-            plugin.load_preset(config.preset_path)
+            plugin.load_preset(folder + '/' + config.preset_path)
         #Notes
         note = config.start_note
-        time = 0.0
+        time = 1.0
         while note <= config.end_note:
             print("Addning note ", note)
             plugin.add_midi_note(note, velocity, time, config.press_duration)
@@ -69,7 +72,7 @@ def main():
         engine.load_graph(graph)
         engine.render(time)
         print("Finished rendering velocity ", velocity)
-        wavfile.write(config.dist_path + '/' + config.filename_pattern.format(name=config.name, note=config.start_note, velocity=velocity, step=config.note_step), config.sample_rate, engine.get_audio().transpose())
+        soundfile.write(folder + '/' + config.dist_path + '/' + config.filename_pattern.format(name=config.name, note=config.start_note, velocity=velocity, step=config.note_step), engine.get_audio().transpose(), config.sample_rate, subtype='PCM_24')
        
 if __name__ == '__main__':
     main()
