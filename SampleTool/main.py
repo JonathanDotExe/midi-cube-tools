@@ -1,6 +1,7 @@
 import dawdreamer
-import configparser
 import json
+import sys
+import traceback
 
 class SampleToolParams:
 
@@ -17,9 +18,27 @@ class SampleToolParams:
         self.dist_path='./'
         self.filename_pattern='{name}_{note}_{velocity}.wav'
 
-
 def main():
-    pass
+    #Load config
+    config_path='./config.json'
+    if len(sys.argv) > 1:
+        config_path=sys.argv[1]
+
+    print("Loading ", config_path)
+    config = SampleToolParams()
+    try:
+        with open(config_path, 'r') as cfg:
+            c = json.load(cfg)
+            config.__dict__.update(c)
+    except:
+        print("Config not found!")
+        traceback.print_exc()
+    with open(config_path, 'w') as cfg:
+        json.dump(config.__dict__, cfg, indent=4)
+    
+    #Process
+
+
 
 if __name__ == '__main__':
     main()
