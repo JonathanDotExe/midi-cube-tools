@@ -54,8 +54,10 @@ def main():
         engine = dawdreamer.RenderEngine(config.sample_rate, config.buffer_size)
         plugin = engine.make_plugin_processor("plugin", config.vst_path)
         if config.preset_path != '':
-            print("Loading preset: ", config.preset_path)
-            plugin.load_preset(folder + '/' + config.preset_path)
+            print("Loading preset: ", folder + '/' + config.preset_path)
+            if not plugin.load_vst3_preset(folder + '/' + config.preset_path):
+                print("Couldn't load preset!")
+                return
         #Notes
         note = config.start_note
         time = 1.0
