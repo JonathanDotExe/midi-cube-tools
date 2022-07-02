@@ -56,9 +56,7 @@ def main():
     #Load state
     if config.preset_path != '':
         print("Loading preset: ", folder + '/' + config.preset_path)
-        if not plugin.load_state(folder + '/' + config.preset_path):
-            print("Couldn't load preset!")
-            return
+        plugin.load_state(folder + '/' + config.preset_path)
     #Open gui
     if config.open_editor:
         plugin.open_editor()
