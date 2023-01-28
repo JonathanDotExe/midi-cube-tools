@@ -33,7 +33,7 @@ class SampleToolParams:
         self.open_editor=False
         self.normalize='total' #possible values: none, total, velocity, note
         self.cut_silence=True
-        self.silence_treshold=-70 #in dB
+        self.silence_threshold=-70 #in dB
         self.release_time=0.05
 
 def normalize(files):
@@ -49,6 +49,15 @@ def normalize(files):
             for i in range(f.len):
                 f[i] = f[i]/max
     
+def cut_silence(audio, threshold, release_time): # Threshold as scalar, release in samples
+    index = audio.len
+    # Find first index
+    for i in reversed(range(audio.len)):
+        if abs(audio[i]) >= threshold:
+            index = i
+    # Release 
+    
+
 def save_files(files, sample_rate):
     for f in files:
         soundfile.write(f[0], f[1], sample_rate, subtype='PCM_24')
@@ -125,6 +134,7 @@ def main():
         normalize(to_normalize)
 
     #Post process
+    
     # Save files
     save_files(files, config.sample_rate)
     files = []
