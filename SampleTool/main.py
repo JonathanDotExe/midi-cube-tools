@@ -32,19 +32,22 @@ class SampleToolParams:
         self.duration=22.0
         self.open_editor=False
         self.normalize='total' #possible values: none, total, velocity, note
+        self.cut_silence=True
+        self.silence_treshold=-70 #in dB
+        self.release_time=0.05
 
 def normalize(files):
     # Find max volume
     max = 0
     for f in files:
-        for s in f[1]:
+        for s in f:
             if abs(s) > max:
                 max = abs(s)
     # Normalize
     if max > 0:
         for f in files:
             for i in range(f.len):
-                f[i][1] = f[i][1]/max
+                f[i] = f[i]/max
     
 def save_files(files, sample_rate):
     for f in files:
@@ -91,6 +94,7 @@ def main():
     #Open
     #Velocities
     files = []
+    to_normalize = []
     for velocity in config.velocities:
         print("Processing velocity ", velocity.name, " (", velocity.velocity, ")")
         #Notes
@@ -109,17 +113,19 @@ def main():
             path = folder + '/' + config.dist_path + '/' + velocity.name + '/' + config.filename_pattern.format(name=config.name, note=config.start_note, velocity=velocity.name, step=config.note_step)
             file = (path, audio)
             if config.normalize == 'note': #Normalize every note
-                normalize([file])
-                soundfile.write(path, audio, config.sample_rate, subtype='PCM_24')
+                normalize(audio)
             else:
-                files.append(file)
+                to_normalize.append(file)
+            files.append(file)
             note += config.note_step
         if config.normalize == 'velocity': #Normalize every velocity
-            normalize(files)
-            save_files(files, config.sample_rate)
-            files = []
+            normalize(to_normalize)
+            to_normalize = []
     if config.normalize == 'total': #Normalize all files
-        normalize(files)
+        normalize(to_normalize)
+
+    #Post process
+    # Save files
     save_files(files, config.sample_rate)
     files = []
        
