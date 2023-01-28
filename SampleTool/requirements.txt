@@ -1,3 +1,4 @@
 dawdreamer
 soundfile
 numpy
+scipy

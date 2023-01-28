@@ -5,6 +5,7 @@ import traceback
 import soundfile
 import numpy
 import pathlib
+import scipy.io.wavfile
 
 class SampleToolVelocity:
 
@@ -30,6 +31,21 @@ class SampleToolParams:
         self.press_duration=20.0
         self.duration=22.0
         self.open_editor=False
+        self.normalize='total' #possible values: none, total, velocity, note
+
+def normalize(files):
+    # Find max volume
+    max = 0
+    for f in files:
+        for s in f:
+            if abs(s) > max:
+                max = abs(s)
+    # Normalize
+    if max > 0:
+        for f in files:
+            for i in range(f.len):
+                f[i] = f[i]/max
+    
 
 def main():
     #Load config
@@ -71,6 +87,7 @@ def main():
         plugin.save_state(config.save_preset_path)
     #Open
     #Velocities
+    files = []
     for velocity in config.velocities:
         print("Processing velocity ", velocity.name, " (", velocity.velocity, ")")
         #Notes
@@ -84,8 +101,23 @@ def main():
             engine.load_graph(graph)
             engine.render(config.duration)
 
-            soundfile.write(folder + '/' + config.dist_path + '/' + velocity.name + '/' + config.filename_pattern.format(name=config.name, note=config.start_note, velocity=velocity.name, step=config.note_step), engine.get_audio().transpose(), config.sample_rate, subtype='PCM_24')
+            print(engine.get_audio())
+            audio = engine.get_audio().transpose()
+            if config.normalize == 'note': #Normalize every note
+                normalize([audio])
+            else:
+                files.append(audio)
+            soundfile.write(folder + '/' + config.dist_path + '/' + velocity.name + '/' + config.filename_pattern.format(name=config.name, note=config.start_note, velocity=velocity.name, step=config.note_step), audio, config.sample_rate, subtype='PCM_24')
             note += config.note_step
+        if config.normalize == 'velocity': #Normalize every velocity
+            normalize(files)
+            files = []
+    if config.normalize == 'total': #Normalize all files
+            normalize(files)
+    files = []
+    
+    #Post process
+
        
 if __name__ == '__main__':
     main()
