@@ -37,15 +37,18 @@ def normalize(files):
     # Find max volume
     max = 0
     for f in files:
-        for s in f:
+        for s in f[1]:
             if abs(s) > max:
                 max = abs(s)
     # Normalize
     if max > 0:
         for f in files:
             for i in range(f.len):
-                f[i] = f[i]/max
+                f[i][1] = f[i][1]/max
     
+def save_files(files, sample_rate):
+    for f in files:
+        soundfile.write(f[0], f[1], sample_rate, subtype='PCM_24')
 
 def main():
     #Load config
@@ -103,21 +106,22 @@ def main():
 
             print(engine.get_audio())
             audio = engine.get_audio().transpose()
+            path = folder + '/' + config.dist_path + '/' + velocity.name + '/' + config.filename_pattern.format(name=config.name, note=config.start_note, velocity=velocity.name, step=config.note_step)
+            file = (path, audio)
             if config.normalize == 'note': #Normalize every note
-                normalize([audio])
+                normalize([file])
+                soundfile.write(path, audio, config.sample_rate, subtype='PCM_24')
             else:
-                files.append(audio)
-            soundfile.write(folder + '/' + config.dist_path + '/' + velocity.name + '/' + config.filename_pattern.format(name=config.name, note=config.start_note, velocity=velocity.name, step=config.note_step), audio, config.sample_rate, subtype='PCM_24')
+                files.append(file)
             note += config.note_step
         if config.normalize == 'velocity': #Normalize every velocity
             normalize(files)
+            save_files(files, config.sample_rate)
             files = []
     if config.normalize == 'total': #Normalize all files
-            normalize(files)
+        normalize(files)
+    save_files(files, config.sample_rate)
     files = []
-    
-    #Post process
-
        
 if __name__ == '__main__':
     main()
