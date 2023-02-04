@@ -6,6 +6,7 @@ import soundfile
 import numpy
 import pathlib
 import scipy.io.wavfile
+import os
 
 class SampleToolVelocity:
 
@@ -46,7 +47,7 @@ def normalize(files):
     # Normalize
     if max > 0:
         for f in files:
-            for i in range(f.len):
+            for i in range(len(f)):
                 f[i] = f[i]/max
     
 def cut_silence(audio, threshold, release_time): # Threshold as scalar, release in samples
@@ -67,7 +68,8 @@ def cut_silence(audio, threshold, release_time): # Threshold as scalar, release 
 
 def save_files(files, sample_rate):
     for f in files:
-        soundfile.write(f[0], f[1], sample_rate, subtype='PCM_24')
+        os.makedirs(f[0], exist_ok=True)
+        soundfile.write(f[0] + '\\' + f[1], f[2], sample_rate, subtype='PCM_24')
 
 def main():
     #Load config
@@ -119,6 +121,14 @@ def main():
     if config.save_preset_path != '':
         plugin.save_state(config.save_preset_path)
     #Open
+    if config.normalize == 'total':
+        print('Normalizing all files together')
+    elif config.normalize == 'velocity':
+        print('Normalizing each velocity individually')
+    elif config.normalize == 'note':
+        print('Normalizing each note individually')
+    else:
+        print('Applying no normalization')
     #Velocities
     files = []
     to_normalize = []
@@ -135,11 +145,9 @@ def main():
             engine.load_graph(graph)
             engine.render(config.duration)
 
-            print(engine.get_audio())
             audio = engine.get_audio().transpose()
-            path = folder + '/' + config.dist_path + '/' + velocity.name + '/' + config.filename_pattern.format(name=config.name, note=config.start_note, velocity=velocity.name, step=config.note_step)
-            print(audio)
-            file = (path, audio)
+            path = folder + '\\' + config.dist_path + '\\' + velocity.name
+            file = (path,  config.filename_pattern.format(name=config.name, note=note, velocity=velocity.name, step=config.note_step), audio)
             if config.normalize == 'note': #Normalize every note
                 normalize(audio)
             else:
@@ -153,10 +161,13 @@ def main():
         normalize(to_normalize)
 
     #Post process
+    
     # TODO
     # Save files
+    print("Saving files ...")
     save_files(files, config.sample_rate)
     files = []
+    print("Done")
        
 if __name__ == '__main__':
     main()
