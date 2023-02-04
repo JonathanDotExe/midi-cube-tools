@@ -7,6 +7,7 @@ import numpy
 import pathlib
 import scipy.io.wavfile
 import os
+import time
 
 class SampleToolVelocity:
 
@@ -39,16 +40,17 @@ class SampleToolParams:
 
 def normalize(files):
     # Find max volume
-    max = 0
+    m = 0
     for f in files:
         for s in f:
-            if abs(s) > max:
-                max = abs(s)
+            if abs(s) > m:
+                m = abs(s)
     # Normalize
-    if max > 0:
+    print("max :", m)
+    if m > 0:
         for f in files:
             for i in range(len(f)):
-                f[i] = f[i]/max
+                f[i] = f[i]/m
     
 def cut_silence(audio, threshold, release_time): # Threshold as scalar, release in samples
     index = audio.len
@@ -115,6 +117,7 @@ def main():
         print("Loading preset: ", folder + '/' + config.preset_path)
         plugin.load_state(folder + '/' + config.preset_path)
     #Open gui
+    t = time.time()/1000.0
     if config.open_editor:
         plugin.open_editor()
     #Save preset
@@ -129,6 +132,13 @@ def main():
         print('Normalizing each note individually')
     else:
         print('Applying no normalization')
+    #Clear buffers
+    graph= [
+        (plugin, [])
+    ]
+    engine.load_graph(graph)
+    engine.render(time.time()/1000.0 - t + 2)
+    plugin.clear_midi()
     #Velocities
     files = []
     to_normalize = []
@@ -152,14 +162,16 @@ def main():
             if config.normalize == 'note': #Normalize every note
                 normalize(audio)
             else:
-                to_normalize.append(file)
+                to_normalize.append(audio)
             files.append(file)
             note += config.note_step
         if config.normalize == 'velocity': #Normalize every velocity
+            print(to_normalize)
             normalize(to_normalize)
             to_normalize = []
     if config.normalize == 'total': #Normalize all files
         normalize(to_normalize)
+        to_normalize = []
 
     #Post process
     if config.cut_silence:
