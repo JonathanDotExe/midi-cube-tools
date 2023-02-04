@@ -9,7 +9,7 @@ import scipy.io.wavfile
 
 class SampleToolVelocity:
 
-    def __init__(self, name, velocity) -> None:
+    def __init__(self, name = "", velocity = 0) -> None:
         self.name = name
         self.velocity = velocity
 
@@ -55,7 +55,14 @@ def cut_silence(audio, threshold, release_time): # Threshold as scalar, release 
     for i in reversed(range(audio.len)):
         if abs(audio[i]) >= threshold:
             index = i
-    # Release 
+    # Release
+    end_index = min(audio.len, index + release_time)
+    if end_index > index:
+        for i in range(index, end_index):
+            percent = (i - index)/(end_index - index)
+            audio[i] *= percent
+    # Cut end
+    
     
 
 def save_files(files, sample_rate):
@@ -75,12 +82,21 @@ def main():
         with open(config_path, 'r') as cfg:
             c = json.load(cfg)
             config.__dict__.update(c)
+            for i in range(len(config.velocities)):
+                vel = SampleToolVelocity()
+                vel.__dict__.update(config.velocities[i])
+                config.velocities[i] = vel
     except:
         print("Config not found!")
         traceback.print_exc()
         found=False
+    # Save settings to add new options
     with open(config_path, 'w') as cfg:
-        json.dump(config.__dict__, cfg, indent=4)
+        # Convert to dict
+        dump = config.__dict__.copy()
+        for i in range(len(dump['velocities'])):
+            dump['velocities'][i] = dump['velocities'][i].__dict__
+        json.dump(dump, cfg, indent=4)
     
     if not found:
         return
@@ -120,6 +136,7 @@ def main():
             print(engine.get_audio())
             audio = engine.get_audio().transpose()
             path = folder + '/' + config.dist_path + '/' + velocity.name + '/' + config.filename_pattern.format(name=config.name, note=config.start_note, velocity=velocity.name, step=config.note_step)
+            print(audio)
             file = (path, audio)
             if config.normalize == 'note': #Normalize every note
                 normalize(audio)
@@ -134,7 +151,7 @@ def main():
         normalize(to_normalize)
 
     #Post process
-    
+    # TODO
     # Save files
     save_files(files, config.sample_rate)
     files = []
