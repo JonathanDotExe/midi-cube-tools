@@ -63,7 +63,7 @@ def cut_silence(audio, threshold, release_time): # Threshold as scalar, release 
             percent = (i - index)/(end_index - index)
             audio[i] *= percent
     # Cut end
-    
+    return audio[0:end_index]
     
 
 def save_files(files, sample_rate):
@@ -144,6 +144,7 @@ def main():
             plugin.add_midi_note(note, velocity.velocity, 0, config.press_duration)
             engine.load_graph(graph)
             engine.render(config.duration)
+            plugin.clear_midi()
 
             audio = engine.get_audio().transpose()
             path = folder + '\\' + config.dist_path + '\\' + velocity.name
@@ -161,7 +162,8 @@ def main():
         normalize(to_normalize)
 
     #Post process
-    
+    if config.cut_silence:
+        print("Cutting end silence with a " + str(config.silence_threshold) + " dB threshold and a release time of " + str(config.release_time) + " s")
     # TODO
     # Save files
     print("Saving files ...")
