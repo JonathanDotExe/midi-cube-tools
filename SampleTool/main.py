@@ -82,6 +82,7 @@ def main():
         with open(config_path, 'r') as cfg:
             c = json.load(cfg)
             config.__dict__.update(c)
+            # Convert velocities
             for i in range(len(config.velocities)):
                 vel = SampleToolVelocity()
                 vel.__dict__.update(config.velocities[i])
@@ -94,8 +95,9 @@ def main():
     with open(config_path, 'w') as cfg:
         # Convert to dict
         dump = config.__dict__.copy()
-        for i in range(len(dump['velocities'])):
-            dump['velocities'][i] = dump['velocities'][i].__dict__
+        dump["velocities"] = []
+        for vel in config.velocities:
+            dump['velocities'].append(vel.__dict__)
         json.dump(dump, cfg, indent=4)
     
     if not found:
