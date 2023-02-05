@@ -173,6 +173,14 @@ def main():
             audio = engine.get_audio().transpose()
             path = folder + '\\' + config.dist_path + '\\' + velocity.name
             file = SampleToolFile(path,  config.filename_pattern.format(name=config.name, note=note, velocity=velocity.name, step=config.note_step), audio)
+            #Cut end
+            if config.seperate_release:
+                dur = round(config.press_duration * config.sample_rate)
+                release = audio[dur:]
+                audio = audio[0:dur]
+                rel = SampleToolFile(path, config.release_filename_pattern.format(name=config.name, note=note, velocity=velocity.name, step=config.note_step), release)
+                to_normalize.append(release)
+                files.append(rel)
             to_normalize.append(audio)
             files.append(file)
             if config.normalize == 'note': #Normalize every note
