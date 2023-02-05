@@ -37,29 +37,43 @@ class SampleToolParams:
         self.cut_silence=True
         self.silence_threshold=-70 #in dB
         self.release_time=0.05
+        self.seperate_release=False
+        self.release_filename_pattern='{name}_{velocity}_{note}_release.wav'
+
+class SampleToolFile:
+
+    def __init__(self, path, filename, audio):
+        self.path = path
+        self.filename = filename
+        self.audio = audio
 
 def normalize(files):
     # Find max volume
     m = 0
     for f in files:
         for s in f:
-            if abs(s) > m:
-                m = abs(s)
+            for c in s:
+                if abs(c) > m:
+                    m = abs(c)
     # Normalize
     print("max :", m)
     if m > 0:
         for f in files:
-            for i in range(len(f)):
-                f[i] = f[i]/m
+            f = f/m
     
 def cut_silence(audio, threshold, release_time): # Threshold as scalar, release in samples
-    index = audio.len
+    index = len(audio)
     # Find first index
-    for i in reversed(range(audio.len)):
-        if abs(audio[i]) >= threshold:
-            index = i
+    for i in reversed(range(len(audio))):
+        found = False
+        for c in audio[i]:
+            if abs(c) >= threshold:
+                index = i
+                found = True
+        if found:
+            break
     # Release
-    end_index = min(audio.len, index + release_time)
+    end_index = min(len(audio), index + release_time)
     if end_index > index:
         for i in range(index, end_index):
             percent = (i - index)/(end_index - index)
@@ -70,8 +84,8 @@ def cut_silence(audio, threshold, release_time): # Threshold as scalar, release 
 
 def save_files(files, sample_rate):
     for f in files:
-        os.makedirs(f[0], exist_ok=True)
-        soundfile.write(f[0] + '\\' + f[1], f[2], sample_rate, subtype='PCM_24')
+        os.makedirs(f.path, exist_ok=True)
+        soundfile.write(f.path + '\\' + f.filename, f.audio, sample_rate, subtype='PCM_24')
 
 def main():
     #Load config
@@ -158,12 +172,12 @@ def main():
 
             audio = engine.get_audio().transpose()
             path = folder + '\\' + config.dist_path + '\\' + velocity.name
-            file = (path,  config.filename_pattern.format(name=config.name, note=note, velocity=velocity.name, step=config.note_step), audio)
-            if config.normalize == 'note': #Normalize every note
-                normalize(audio)
-            else:
-                to_normalize.append(audio)
+            file = SampleToolFile(path,  config.filename_pattern.format(name=config.name, note=note, velocity=velocity.name, step=config.note_step), audio)
+            to_normalize.append(audio)
             files.append(file)
+            if config.normalize == 'note': #Normalize every note
+                normalize(to_normalize)
+                to_normalize = []
             note += config.note_step
         if config.normalize == 'velocity': #Normalize every velocity
             print(to_normalize)
@@ -176,6 +190,8 @@ def main():
     #Post process
     if config.cut_silence:
         print("Cutting end silence with a " + str(config.silence_threshold) + " dB threshold and a release time of " + str(config.release_time) + " s")
+        for f in files:
+            f.audio = cut_silence(f.audio, pow(10, config.silence_threshold/10), round(config.release_time * config.sample_rate))
     # TODO
     # Save files
     print("Saving files ...")
