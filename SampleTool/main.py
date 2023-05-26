@@ -39,6 +39,8 @@ class SampleToolParams:
         self.release_time=0.05
         self.seperate_release=False
         self.release_filename_pattern='{name}_{velocity}_{note}_release.wav'
+        self.normalize_release_seperate=True
+        self.start_time=1
 
 class SampleToolFile:
 
@@ -59,10 +61,12 @@ def normalize(files):
     print("max :", m)
     if m > 0:
         for f in files:
-            f = f/m
+            for i in range(len(f)):
+                for j in range(len(f[i])):
+                    f[i][j] = f[i][j]/m
     
 def cut_silence(audio, threshold, release_time): # Threshold as scalar, release in samples
-    index = len(audio)
+    index = 0
     # Find first index
     for i in reversed(range(len(audio))):
         found = False
@@ -78,8 +82,23 @@ def cut_silence(audio, threshold, release_time): # Threshold as scalar, release 
         for i in range(index, end_index):
             percent = (i - index)/(end_index - index)
             audio[i] *= percent
+    print("Cutting " + str(index) + "/" + str(end_index) + "/" + str(len(audio)))
     # Cut end
     return audio[0:end_index]
+
+def trim_start(audio):
+    index = 0
+    # Find first index
+    for i in range(len(audio)):
+        found = False
+        for c in audio[i]:
+            if abs(c) >= 0:
+                index = i
+                found = True
+        if found:
+            break
+    # Cut end
+    return audio[index:]
     
 
 def save_files(files, sample_rate):
@@ -156,6 +175,7 @@ def main():
     #Velocities
     files = []
     to_normalize = []
+    to_normalize_release = []
     for velocity in config.velocities:
         print("Processing velocity ", velocity.name, " (", velocity.velocity, ")")
         #Notes
@@ -165,35 +185,45 @@ def main():
             graph= [
                 (plugin, [])
             ]
-            plugin.add_midi_note(note, velocity.velocity, 0, config.press_duration)
+            plugin.add_midi_note(note, velocity.velocity, config.start_time, config.press_duration)
             engine.load_graph(graph)
-            engine.render(config.duration)
+            engine.render(config.duration + config.start_time)
             plugin.clear_midi()
 
-            audio = engine.get_audio().transpose()
+            audio = trim_start(engine.get_audio().transpose())
             path = folder + '\\' + config.dist_path + '\\' + velocity.name
-            file = SampleToolFile(path,  config.filename_pattern.format(name=config.name, note=note, velocity=velocity.name, step=config.note_step), audio)
+            file = SampleToolFile(path, config.filename_pattern.format(name=config.name, note=note, velocity=velocity.name, step=config.note_step), audio)
             #Cut end
             if config.seperate_release:
                 dur = round(config.press_duration * config.sample_rate)
                 release = audio[dur:]
                 audio = audio[0:dur]
+                file.audio = audio # Re set the audio
                 rel = SampleToolFile(path, config.release_filename_pattern.format(name=config.name, note=note, velocity=velocity.name, step=config.note_step), release)
-                to_normalize.append(release)
+                if config.normalize_release_seperate:
+                    to_normalize_release.append(release)
+                else:
+                    to_normalize.append(release)
                 files.append(rel)
             to_normalize.append(audio)
             files.append(file)
             if config.normalize == 'note': #Normalize every note
                 normalize(to_normalize)
+                normalize(to_normalize_release)
                 to_normalize = []
+                to_normalize_release = []
             note += config.note_step
         if config.normalize == 'velocity': #Normalize every velocity
             print(to_normalize)
             normalize(to_normalize)
+            normalize(to_normalize_release)
             to_normalize = []
+            to_normalize_release = []
     if config.normalize == 'total': #Normalize all files
         normalize(to_normalize)
+        normalize(to_normalize_release)
         to_normalize = []
+        to_normalize_release = []
 
     #Post process
     if config.cut_silence:
