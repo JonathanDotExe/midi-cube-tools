@@ -40,7 +40,6 @@ class SampleToolParams:
         self.seperate_release=False
         self.release_filename_pattern='{name}_{velocity}_{note}_release.wav'
         self.normalize_release_seperate=True
-        self.start_time=1
 
 class SampleToolFile:
 
@@ -185,12 +184,12 @@ def main():
             graph= [
                 (plugin, [])
             ]
-            plugin.add_midi_note(note, velocity.velocity, config.start_time, config.press_duration)
+            plugin.add_midi_note(note, velocity.velocity, 0, config.press_duration)
             engine.load_graph(graph)
-            engine.render(config.duration + config.start_time)
+            engine.render(config.duration)
             plugin.clear_midi()
 
-            audio = trim_start(engine.get_audio().transpose())
+            audio = engine.get_audio().transpose()
             path = folder + '\\' + config.dist_path + '\\' + velocity.name
             file = SampleToolFile(path, config.filename_pattern.format(name=config.name, note=note, velocity=velocity.name, step=config.note_step), audio)
             #Cut end
